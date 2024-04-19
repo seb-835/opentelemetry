@@ -29,7 +29,7 @@ To gather Kubernetes Metrics, we will utilize the k8s_cluster and kubeletstats r
 We will utilize a dedicated service account for handling metrics. There is no need to grant additional access for the K8S_event service account define earlier.
 
 ```
-kubectl apply -f  otel/otel_rbac_metrics.yaml
+kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/otel/otel_rbac_metrics.yaml
 ```
 
 ###  Tip 11 : Metrics Config
@@ -177,7 +177,7 @@ The implementation of our 4 steps is orchestrated by the Services block.
   ```
 Here is our complete OpenTelemetry file, you can view it here. It is ready to be deployed.
 ```
-kubectl apply -f  otel/opentelemetry-metrics.example.yaml
+kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/otel/opentelemetry-metrics.example.yaml
 ```
 
 ### View the collected data in Mimir/Grafana Dashboard
