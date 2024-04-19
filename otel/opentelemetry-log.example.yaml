@@ -1,0 +1,159 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: logs
+  namespace: otel
+  labels:
+     name: logs
+spec:
+  image: otel/opentelemetry-collector-contrib-dev:latest
+  mode: daemonset
+  env:
+    - name: K8S_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: OPEN_TELEMETRY_COLLECTOR_ORGID
+      valueFrom:
+        secretKeyRef:
+          name: xscopeorgid
+          key: X-SCOPE-ORGID 
+    - name: OPEN_TELEMETRY_COLLECTOR_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: loki-creds
+          key: USER
+    - name: OPEN_TELEMETRY_COLLECTOR_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: loki-creds
+          key: PASSWORD
+
+  volumeMounts:
+    - name: varlogpods
+      mountPath: /var/log/pods
+      readOnly: true
+  volumes:
+    - name: varlogpods
+      hostPath:
+        path: /var/log/pods
+
+  tolerations:
+    - operator: Exists
+      effect: NoExecute
+    - operator: Exists
+      effect: NoSchedule
+
+  config: |
+    receivers:
+      filelog:
+        include:
+          - /var/log/pods/*/*/*.log
+        start_at: beginning 
+        include_file_path: true
+        #include_file_name: false
+        operators:
+          # Find out which format is used by kubernetes
+          - type: router
+            id: get-format
+            routes:
+              - output: parser-docker
+                expr: 'body matches "^\\{"'
+              - output: parser-crio
+                expr: 'body matches "^[^ Z]+ "'
+              - output: parser-containerd
+                expr: 'body matches "^[^ Z]+Z"'
+          # Parse CRI-O format
+          - type: regex_parser
+            id: parser-crio
+            regex: '^(?P<time>[^ Z]+) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) ?(?P<log>.*)$'
+            output: extract_metadata_from_filepath
+            timestamp:
+              parse_from: attributes.time
+              layout_type: gotime
+              layout: '2006-01-02T15:04:05.999999999Z07:00'
+          # Parse CRI-Containerd format
+          - type: regex_parser
+            id: parser-containerd
+            regex: '^(?P<time>[^ ^Z]+Z) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) ?(?P<log>.*)$'
+            output: extract_metadata_from_filepath
+            timestamp:
+              parse_from: attributes.time
+              layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+          # Parse Docker format
+          - type: json_parser
+            id: parser-docker
+            output: extract_metadata_from_filepath
+            timestamp:
+              parse_from: attributes.time
+              layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+          - type: move
+            from: attributes.log
+            to: body
+          # Extract metadata from file path
+          - type: regex_parser
+            id: extract_metadata_from_filepath
+            # Pod UID is not always 36 characters long
+            regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod_name>[^_]+)_(?P<uid>[a-f0-9\-]{16,36})\/(?P<container_name>[^\._]+)\/(?P<restart_count>\d+)\.log$'
+            parse_from: attributes["log.file.path"]
+            cache:
+              size: 128 # default maximum amount of Pods per Node is 110
+          # Rename attributes
+          - type: move
+            from: attributes["log.file.path"]
+            to: resource["filename"]
+          - type: move
+            from: attributes.container_name
+            to: resource["container"]
+          - type: move
+            from: attributes.namespace
+            to: resource["namespace"]
+          - type: move
+            from: attributes.pod_name
+            to: resource["pod"]
+          - type: add
+            field: resource["cluster"]
+            value: $OPEN_TELEMETRY_COLLECTOR_ORGID
+          - type: add
+            field: resource["node"]
+            value: $K8S_NODE_NAME
+
+    processors:
+      resource/logs:
+        attributes:
+          - action: insert
+            key: loki.format
+            value: raw
+          - action: insert
+            key: receiver 
+            value: 'filelog'
+          - action: insert
+            key: loki.resource.labels
+            value: receiver,pod, namespace, container, cluster, filename, node
+
+    exporters:
+      debug:
+
+      loki:
+        endpoint: http://loki.172.18.1.1.nip.io/loki/api/v1/push
+        headers:
+          X-Scope-OrgID: $OPEN_TELEMETRY_COLLECTOR_ORGID
+        #auth:
+        #  authenticator: basicauth/client
+        tls:
+          insecure: false 
+          insecure_skip_verify: true 
+
+    extensions:
+      basicauth/client:
+        client_auth: 
+          username: $OPEN_TELEMETRY_COLLECTOR_USERNAME 
+          password: $OPEN_TELEMETRY_COLLECTOR_PASSWORD
+
+    service:
+      extensions: [basicauth/client]
+      pipelines:
+        logs:
+          receivers: [filelog]
+          processors: [resource/logs]
+          exporters: [loki,debug]

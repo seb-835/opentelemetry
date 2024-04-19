@@ -1,0 +1,80 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: k8s-event 
+  namespace: otel
+  labels:
+     name: k8s-event
+spec:
+  image: otel/opentelemetry-collector-contrib-dev:latest
+  serviceAccount: otel-k8sevents
+  mode: deployment
+
+  env:
+    - name: K8S_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: OPEN_TELEMETRY_COLLECTOR_ORGID
+      valueFrom:
+        secretKeyRef:
+          name: loki-creds 
+          key: X-SCOPE-ORGID 
+    - name: OPEN_TELEMETRY_COLLECTOR_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: loki-creds
+          key: USER
+    - name: OPEN_TELEMETRY_COLLECTOR_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: loki-creds
+          key: PASSWORD
+
+  config: |
+    receivers:
+      k8s_events:
+        namespaces: []
+
+    processors:
+      resource/k8s_events:
+        attributes:
+          - action: insert
+            key: cluster
+            value: $OPEN_TELEMETRY_COLLECTOR_ORGID
+          - action: insert
+            key: node 
+            value: $K8S_NODE_NAME
+          - action: insert
+            key: receiver 
+            value: 'k8s_event'
+          - action: insert
+            key: loki.resource.labels
+            value: node,receiver,cluster
+
+    exporters:
+      debug:
+
+      loki:
+        endpoint: http://loki.172.18.1.1.nip.io/loki/api/v1/push
+        headers:
+          X-Scope-OrgID: $OPEN_TELEMETRY_COLLECTOR_ORGID
+        #auth:
+        #  authenticator: basicauth/client
+        tls:
+          insecure: false 
+          insecure_skip_verify: true 
+
+    extensions:
+      basicauth/client:
+        client_auth: 
+          username: $OPEN_TELEMETRY_COLLECTOR_USERNAME 
+          password: $OPEN_TELEMETRY_COLLECTOR_PASSWORD
+
+    service:
+      extensions: [basicauth/client]
+      pipelines:
+        logs:
+          receivers: [k8s_events]
+          processors: [resource/k8s_events]
+          exporters: [loki,debug]
