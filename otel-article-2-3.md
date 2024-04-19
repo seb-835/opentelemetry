@@ -247,7 +247,7 @@ The implementation of our 4 steps is orchestrated by the Services block.
   ```
 Here is our complete OpenTelemetry file, you can view it here. It is ready to be deployed.
 ```
-kubectl apply -f  otel/opentelemetry-log.example.yaml
+kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/otel/opentelemetry-log.example.yaml
 ```
 
 ### View the collected data in Loki/Grafana Dashboard
