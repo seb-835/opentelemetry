@@ -76,7 +76,7 @@ If you are able to retrieve this information, it means your user account allows 
 The manifest otel/otel_rbac_K8S-events.yaml grants read access to Kubernetes Events for pods using the serviceAccount 'otel-k8sevent' in the namespace 'otel'.
 
 ```
-kubectl apply -f  otel/otel_rbac_K8S-events.yaml
+kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/otel/otel_rbac_K8S-events.yaml
 ```
 The collector is configured to use this serviceAccount.
 ```
@@ -94,7 +94,7 @@ The collector is configured to use this serviceAccount.
 To export telemetry information to the Loki data source as logs in our LGM suite, the collector exporter must authenticate using a login/password and transmit the identifier of our tenant via the X-Scope-OrgID field in the HTTP request header. This information is "sensitive" and should not be written in plain text in the collector manifest! We will use the Kubernetes "Secret" object to store this information.
 
 ```
-kubectl apply -f  otel/otel_secret_loki.yaml
+kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/otel/otel_secret_loki.yaml
 ```
 
 In the collector declaration, we will be able to read the secrets through environment variables, but also define new variables to store the node_name, for example.
@@ -261,7 +261,7 @@ The implementation of our 4 steps is orchestrated by the Services block.
   ```
 Here is our complete OpenTelemetry file, you can view it here. It is ready to be deployed.
 ```
-kubectl apply -f  otel/opentelemetry-k8s_event.example.yaml
+kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/otel/opentelemetry-k8s_event.example.yaml
 ```
 
 ### View the collected data in Loki/Grafana Dashboard
