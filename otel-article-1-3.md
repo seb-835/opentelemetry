@@ -17,7 +17,7 @@ I implemented OpenTelemetry to collect events, logs, and metrics from a Kubernet
 Here, I share some implementation and security tips. This first article covers Kubernetes Events Collection (1/3), followed by    Kubernetes Logs Collection (2/3) and Kubernetes metrics collection (3/3).
 
 ## Prerequisite
- - A functional Kubernetes cluster
+ - A functional Kubernetes cluster with cert-manager installed 
  - The LGM suite configured with 2 data sources:
     - https://loki.172.18.1.1.nip.io
     - https://mimir.172.18.1.1.nip.io
