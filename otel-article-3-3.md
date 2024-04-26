@@ -1,23 +1,23 @@
 Technical Knowledge article
 
-#  My Tips and Tricks for leveraging OpenTelemetry with a LGM stack to securely gather K8S telemetry Data
+#  My Tips and Tricks for leveraging  with a LGM stack to securely gather K8S telemetry Data
 #  (3/3) Kubernetes Metrics Collection
 
 ![](images/kube_otel.png)
 
 ## Introduction
-I implemented OpenTelemetry to collect events, logs, and metrics from a Kubernetes cluster, where previously I used tools like node-exporter, kube-stats-metrics, and promtail with the Loki/Grafana/Mimir suite.
+I implemented  to collect events, logs, and metrics from a Kubernetes cluster, where previously I used tools like node-exporter, kube-stats-metrics, and promtail with the Loki/Grafana/Mimir suite.
 
-Here, I share some implementation and security tips about Kubernetes Logs Collection and OpenTelemetry.
+Here, I share some implementation and security tips about Kubernetes Logs Collection and .
 
 ## Prerequisite
- - A functional Kubernetes cluster
+ - A functional Kubernetes cluster with cert-manager installed
  - The LGM suite configured with 2 data sources:
     - https://loki.172.18.1.1.nip.io
     - https://mimir.172.18.1.1.nip.io
  - You have read article : (1/3) Kubernetes Events Collection , (2/3) Kubernetes Logs Collection and you already know our tips :
 
-       - Tip 1 - Using the OpenTelemetry-operator
+       - Tip 1 - Using the -operator
        - Tip 2 - Implementing one collector per type of data
        - Tip 4 - Secret and Env
        - Tip 5 - The Deployment Mode for the Collector
@@ -175,7 +175,7 @@ The implementation of our 4 steps is orchestrated by the Services block.
           processors: [k8sattributes,resource]
           exporters: [prometheusremotewrite]
   ```
-Here is our complete OpenTelemetry file, you can view it here. It is ready to be deployed.
+Here is our complete  file, you can view it here. It is ready to be deployed.
 ```
 kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/otel/opentelemetry-metrics.example.yaml
 ```
