@@ -12,7 +12,7 @@ Here, I share some implementation and security tips about Kubernetes Logs Collec
 
 
 ## Prerequisite
- - A functional Kubernetes cluster
+ - A functional Kubernetes cluster with cert-manager installed
  - The LGM suite configured with 2 data sources:
     - https://loki.172.18.1.1.nip.io
     - https://mimir.172.18.1.1.nip.io
