@@ -48,8 +48,8 @@ It also provides Instrumentation CRD to supports injecting and configuring auto-
 Let's install the OpenTelemetry-operator in a dedicated namespace called "otel".
 
 ```
-helm repo add open-telemetry https://open-telemetry.github.io/OpenTelemetry-helm-charts
-helm upgrade --install OpenTelemetry-operator open-telemetry/OpenTelemetry-operator -n otel --create-namespace
+helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+helm upgrade --install opentelemetry-operator open-telemetry/opentelemetry-operator -n otel --create-namespace
 ```
 
 ## Tip 2: "Do not put all your eggs in one basket" or "Implementing one collector per type of data"
@@ -161,7 +161,7 @@ The 'Config' of the OpenTelemetry Collector is divided into 5 steps:
  - Extensions to manage specifics operation like authentication
  - Service, which connects and orchestrates the previous configurations
 
-The image "otel/OpenTelemetry-collector-contrib" (https://github.com/open-telemetry/OpenTelemetry-collector-contrib) includes an extensive set of plugins (receivers, processors, exporters) allowing integration with almost any system.
+The image "otel/opentelemetry-collector-contrib" (https://github.com/open-telemetry/opentelemetry-collector-contrib) includes an extensive set of plugins (receivers, processors, exporters) allowing integration with almost any system.
 
 We will implement the following configuration for our k8s-event-collector :
 ![](images/service-events.png)
