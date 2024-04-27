@@ -1,6 +1,6 @@
 Technical Knowledge article
 
-#  My Tips and Tricks for leveraging OpenTelemetry with a LGM stack to securely gather K8S telemetry Data
+#  My Tips and Tricks for leveraging OpenTelemetry with an LGM stack to securely gather K8S telemetry Data
 #  (1/3) Kubernetes Events Collection
 
 ![](images/kube_otel.png)
@@ -35,17 +35,17 @@ This approach involves:
 
 These three phases form the service/pipeline of a collector in the OpenTelemetry context with 3 phases: receiver (extract), processor (transform), export (load).
 
-## First Tip: Using the OpenTelemetry-operator
+## First Tip: Using the OpenTelemetry Operator
 https://github.com/open-telemetry/opentelemetry-operator
 
-The OpenTelemetry-operator simplifies the deployment and dynamic configuration of OpenTelemetry Collectors in Kubernetes environments using the CRD.
+The OpenTelemetry Operator simplifies the deployment and dynamic configuration of OpenTelemetry Collectors in Kubernetes environments using the CRD.
 It handles the deployment, update, and scaling of the collectors that we decide to instantiate.
 
 It also provides Instrumentation CRD to supports injecting and configuring auto-instrumentation libraries for .NET, Java, Node.js, Python, and Go services. We will not use this feature in this article.
 
 <img src="images/operator.png " style="width: 70%;" />
 
-Let's install the OpenTelemetry-operator in a dedicated namespace called "otel".
+Let's install the OpenTelemetry Operator in a dedicated namespace called "otel".
 
 ```
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
@@ -65,7 +65,7 @@ I therefore encourage you to declare:
 
 ## Implementing our Kubernetes Events Collector
 ### Tip 3 :  RBAC
-A quick reminder, there are mainly two ways to read events from a Kubernetes cluster through the API server.
+A brief reminder, there are mainly two ways to read events from a Kubernetes cluster through the API server.
 ```
 kubectl describe pod <podname>
 kubectl get events
@@ -73,12 +73,12 @@ kubectl get events
 
 If you are able to retrieve this information, it means your user account allows you to read this information from your cluster. By default, our OpenTelemetry collector does not have this privilege. We need to grant it permission to read this information. How? Thanks to RBAC ;)
 
-The manifest otel/otel_rbac_K8S-events.yaml grants read access to Kubernetes Events for pods using the serviceAccount 'otel-k8sevent' in the namespace 'otel'.
+The manifest otel/otel_rbac_K8S-events.yaml grants read access to Kubernetes Events for pods using the ServiceAccount 'otel-k8sevent' in the namespace 'otel'.
 
 ```
 kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/otel/otel_rbac_K8S-events.yaml
 ```
-The collector is configured to use this serviceAccount.
+The collector is configured to use this ServiceAccount.
 ```
   ...
   metadata:
@@ -104,24 +104,24 @@ In the collector declaration, we will be able to read the secrets through enviro
     serviceAccount: otel-k8sevents
     env:
     - name: K8S_NODE_NAME
-     valueFrom:
-       fieldRef:
-         fieldPath: spec.nodeName
-   - name: OPEN_TELEMETRY_COLLECTOR_ORGID
       valueFrom:
-       secretKeyRef:
-         name: loki-creds
-         key: X-SCOPE-ORGID
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: OPEN_TELEMETRY_COLLECTOR_ORGID
+      valueFrom:
+        secretKeyRef:
+          name: loki-creds
+          key: X-SCOPE-ORGID
     - name: OPEN_TELEMETRY_COLLECTOR_USERNAME
-     valueFrom:
-       secretKeyRef:
-         name: loki-creds
-         key: USER
-   - name: OPEN_TELEMETRY_COLLECTOR_PASSWORD
-     valueFrom:
-       secretKeyRef:
-         name: loki-creds
-         key: PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: loki-creds
+          key: USER
+    - name: OPEN_TELEMETRY_COLLECTOR_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: loki-creds
+          key: PASSWORD
   ...
 ```
 and environment variables will be referenced using "$" such as:
@@ -136,7 +136,7 @@ and environment variables will be referenced using "$" such as:
 The collector can be deployed in four modes: deployment, statefulset, daemonset, and sidecar.
 Today, we will exclusively focus on discussing the Deployment and DaemonSet modes, considering our specific use case.
 
-- If we need to collect logs from each container or kubelet metrics from each node, we need to install a collector on each node of our cluster. In this case, we will choose the "DaemonSet" mode. One collector instance will be deploy on each node.
+- If we need to collect logs from each container or kubelet metrics from each node, we need to install a collector on each node of our cluster. In this case, we will choose the "DaemonSet" mode. One collector instance will be deployed on each node.
 
 <img src="images/daemonset.png " style="width: 60%;" />
 
@@ -166,22 +166,21 @@ The image "otel/opentelemetry-collector-contrib" (https://github.com/open-teleme
 We will implement the following configuration for our k8s-event-collector :
 ![](images/service-events.png)
 
-Let's start with the Receivers block:
+Let's start with the `receivers` block:
 ```
   ...
   config : |
    receivers:
       k8s_events:
         namespaces: []
-        auth_type: serviceAccount
-
+        auth_type: ServiceAccount
   ...
 ```
-The k8s_events receiver collects events from all namespaces using the serviceAccount to authenticate with the Kubernetes API Server.
+The k8s_events receiver collects events from all namespaces using the ServiceAccount to authenticate with the Kubernetes API Server.
 https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/k8seventsreceiver/README.md
 
 
-The Processors block will allow us to enrich the collected data by adding attributes such as node, cluster, and receiver.
+The `processors` block will allow us to enrich the collected data by adding attributes such as node, cluster, and receiver.
 https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/resourceprocessor/README.md
 ```
   ...
@@ -204,9 +203,9 @@ https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/proc
             value: node,receiver,cluster
     ...
 ```
-Here we find an example of the utilization of our previoulsy defined environment variables OPEN_TELEMETRY_COLLECTOR_ORGID and K8S_NODE_NAME.
+Here we find an example of the utilization of our previously defined environment variables OPEN_TELEMETRY_COLLECTOR_ORGID and K8S_NODE_NAME.
 
-The Exporters block allows exporting the collected and enriched data to their final destination: Loki.
+The `exporters` block allows exporting the collected and enriched data to their final destination: Loki.
 https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/lokiexporter/README.md
 
 ```
@@ -226,10 +225,10 @@ https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/expo
           insecure_skip_verify: true
     ...
 ```
-If your endpoint is using an insecure http channel, *insecure* must be set to true, and  *insecure_skip_verify* be omited.
-If your endpoint is using an insecure https channel with a self-signed-certificate, *insecure* must be set to false ,and *insecure_skip_verify* to true
+If your endpoint is using an insecure HTTP channel, *insecure* must be set to true, and  *insecure_skip_verify* be omitted.
+If your endpoint is using an insecure HTTPS channel with a self-signed-certificate, *insecure* must be set to false, and *insecure_skip_verify* to true
 
-The Extension block allows us to configure the authentication mechanism for the exporter.
+The `extensions` block allows us to configure the authentication mechanism for the exporter.
 ```
   ...
   config : |
@@ -244,7 +243,7 @@ The Extension block allows us to configure the authentication mechanism for the 
     ...
 ```
 
-The implementation of our 4 steps is orchestrated by the Services block.
+The implementation of our 4 steps is orchestrated by the `service` block.
 ```
   config : |
     receivers: ...
@@ -265,7 +264,7 @@ kubectl apply -f  https://raw.githubusercontent.com/seb-835/opentelemetry/main/o
 ```
 
 ### View the collected data in Loki/Grafana Dashboard
-Finaly we can connect to our grafana instance and explore Loki DataSource ... apply a filter and Yes we got our kubernetes events!!!!
+Finally we can connect to our Grafana instance and explore Loki DataSource ... apply a filter and Yes we got our Kubernetes events!!!!
 
 ![](images/loki-events.png)
 
